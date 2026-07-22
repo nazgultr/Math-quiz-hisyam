@@ -171,10 +171,9 @@
     box-shadow:0 5px 0 rgba(0,0,0,.15), 0 8px 16px rgba(0,0,0,.12);
     transition:transform .1s ease, box-shadow .1s ease, filter .15s ease;
   }
-  .opt:nth-child(1){ background:var(--pink); }
-  .opt:nth-child(2){ background:var(--purple); }
-  .opt:nth-child(3){ background:var(--orange); }
-  .opt:nth-child(4){ background:var(--green); }
+  .opt{
+    background:#4a90d9;
+  }
 
   .opt:hover:not(:disabled){ transform:translateY(-2px); filter:brightness(1.05); }
   .opt:active:not(:disabled){ transform:translateY(2px); box-shadow:0 2px 0 rgba(0,0,0,.15); }
@@ -208,6 +207,118 @@
     font-family:'Baloo 2', cursive;
     font-size:1.15rem;
     color:var(--purple);
+  }
+  .result-icon{
+    font-size:3rem;
+    line-height:1;
+    margin-bottom:4px;
+  }
+
+  .train-reward{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+  }
+  .train-scene{
+    position:relative;
+    width:100%;
+    max-width:460px;
+    height:190px;
+    overflow:hidden;
+    border-radius:16px;
+    background:linear-gradient(180deg,#bfe9f7 0%,#eaf7ff 70%,#eaf7ff 100%);
+    margin:6px 0 14px;
+  }
+  .tsc-cloud{
+    position:absolute;
+    background:#fff;
+    border-radius:30px;
+    opacity:.9;
+  }
+  .tsc-cloud::before, .tsc-cloud::after{
+    content:"";
+    position:absolute;
+    background:#fff;
+    border-radius:50%;
+  }
+  .tsc-cloud.c1{ width:50px; height:18px; top:14px; left:20px; }
+  .tsc-cloud.c1::before{ width:26px; height:26px; top:-12px; left:4px; }
+  .tsc-cloud.c1::after{ width:20px; height:20px; top:-8px; left:26px; }
+  .tsc-cloud.c2{ width:60px; height:20px; top:26px; right:30px; }
+  .tsc-cloud.c2::before{ width:30px; height:30px; top:-14px; left:6px; }
+  .tsc-cloud.c2::after{ width:22px; height:22px; top:-9px; left:32px; }
+
+  .tsc-station{
+    position:absolute;
+    right:14px;
+    bottom:38px;
+    width:110px;
+    z-index:1;
+  }
+  .tsc-roof{
+    width:100%;
+    height:16px;
+    background:#8a5cf6;
+    border-radius:6px 6px 0 0;
+  }
+  .tsc-sign{
+    background:#fff;
+    color:#3a3450;
+    font-family:'Baloo 2',cursive;
+    font-size:.6rem;
+    font-weight:700;
+    text-align:center;
+    letter-spacing:1px;
+    padding:2px 0;
+  }
+  .tsc-platform{
+    width:100%;
+    height:34px;
+    background:#d8c9f0;
+    border-top:4px solid #8a5cf6;
+  }
+
+  .tsc-track{
+    position:absolute;
+    left:0; right:0;
+    bottom:30px;
+    height:6px;
+    background:repeating-linear-gradient(90deg, #444 0 14px, #777 14px 18px);
+  }
+
+  .tsc-train-wrap{
+    position:absolute;
+    bottom:24px;
+    left:-260px;
+    width:230px;
+    animation:trainMove 7s linear infinite;
+  }
+  .tsc-train-wrap svg{ width:100%; height:auto; display:block; }
+
+  @keyframes trainMove{
+    0%{ left:-260px; }
+    100%{ left:100%; }
+  }
+
+  .puff{ transform-origin:center; }
+  .p1{ animation:puff 1.6s ease-out infinite; }
+  .p2{ animation:puff 1.6s ease-out infinite .5s; }
+  .p3{ animation:puff 1.6s ease-out infinite 1s; }
+  @keyframes puff{
+    0%{ transform:translateY(0) scale(.6); opacity:.9; }
+    100%{ transform:translateY(-30px) scale(1.5); opacity:0; }
+  }
+
+  .train-reward h2{
+    font-family:'Baloo 2', cursive;
+    color:var(--purple);
+    margin:6px 0;
+  }
+  .train-reward p{
+    color:#8a86a0;
+    font-weight:700;
+    margin:0 0 18px;
   }
 
   .nextbtn{
@@ -287,6 +398,8 @@ const questions = [{"num": 1, "emoji": "\ud83d\ude9c", "label": "tractors", "cou
 let current = 0;
 let score = 0;
 let answered = false;
+let blockCorrect = 0;
+let trainRewardIndex = 0;
 
 const stage = document.getElementById('stage');
 const scoreDisplay = document.getElementById('scoreDisplay');
@@ -340,10 +453,11 @@ function handleAnswer(letter, btn){
   if(letter === q.answer){
     btn.classList.add('correct');
     score++;
-    feedback.textContent = 'Yay! That\'s right! 🌟';
+    blockCorrect++;
+    feedback.innerHTML = '<div class="result-icon">👍</div><div>Yay! That\'s right!</div>';
   } else {
     btn.classList.add('wrong');
-    feedback.textContent = 'Good try! The right answer is highlighted.';
+    feedback.innerHTML = '<div class="result-icon">❌</div><div>Good try! The right answer is highlighted.</div>';
     allBtns.forEach((b,i)=>{
       if(letters[i] === q.answer) b.classList.add('reveal');
     });
@@ -356,9 +470,86 @@ function nextQuestion(){
   current++;
   if(current >= questions.length){
     renderResults();
+  } else if(current % 10 === 0){
+    const perfectBlock = (blockCorrect === 10);
+    blockCorrect = 0;
+    if(perfectBlock){
+      renderTrainReward();
+    } else {
+      renderQuestion();
+    }
   } else {
     renderQuestion();
   }
+}
+
+// Distinct train designs so each reward looks different
+const trainVariants = [
+  { body:'#e8483a', cab:'#ffe08a', stripe:'#ffffff', wheel:'#2b2b2b', smoke:'#f2f2f2', name:'Red Express' },
+  { body:'#2f9e5c', cab:'#dff5e6', stripe:'#ffd54f', wheel:'#1e1e1e', smoke:'#eef7ee', name:'Green Steamer' },
+  { body:'#3a7bd5', cab:'#eaf3ff', stripe:'#ffffff', wheel:'#242424', smoke:'#f0f4ff', name:'Blue Bullet' },
+  { body:'#f2a530', cab:'#fff4de', stripe:'#7a4a1e', wheel:'#2b2b2b', smoke:'#fff7ea', name:'Sunset Freight' },
+  { body:'#8a5cf6', cab:'#f1e9ff', stripe:'#ffd54f', wheel:'#242424', smoke:'#f4f0ff', name:'Purple Rocket Rail' },
+  { body:'#ff7ab8', cab:'#fff0f6', stripe:'#ffffff', wheel:'#2b2b2b', smoke:'#fff3f8', name:'Pink Sakura Line' },
+];
+
+function buildTrainSVG(v){
+  return `
+  <svg viewBox="0 0 460 170" xmlns="http://www.w3.org/2000/svg">
+    <!-- coal car -->
+    <rect x="330" y="70" width="90" height="55" rx="8" fill="${v.body}" opacity="0.85"/>
+    <circle cx="352" cy="135" r="16" fill="${v.wheel}"/>
+    <circle cx="398" cy="135" r="16" fill="${v.wheel}"/>
+    <!-- passenger car -->
+    <rect x="185" y="55" width="130" height="75" rx="10" fill="${v.body}"/>
+    <rect x="200" y="70" width="28" height="26" rx="4" fill="${v.cab}"/>
+    <rect x="240" y="70" width="28" height="26" rx="4" fill="${v.cab}"/>
+    <rect x="280" y="70" width="28" height="26" rx="4" fill="${v.cab}"/>
+    <rect x="185" y="118" width="130" height="8" fill="${v.stripe}"/>
+    <circle cx="210" cy="140" r="17" fill="${v.wheel}"/>
+    <circle cx="255" cy="140" r="17" fill="${v.wheel}"/>
+    <circle cx="295" cy="140" r="17" fill="${v.wheel}"/>
+    <!-- engine -->
+    <rect x="40" y="40" width="130" height="90" rx="14" fill="${v.body}"/>
+    <rect x="55" y="55" width="40" height="34" rx="6" fill="${v.cab}"/>
+    <rect x="40" y="112" width="130" height="10" fill="${v.stripe}"/>
+    <rect x="20" y="95" width="30" height="35" rx="6" fill="${v.body}"/>
+    <circle cx="70" cy="145" r="19" fill="${v.wheel}"/>
+    <circle cx="120" cy="145" r="19" fill="${v.wheel}"/>
+    <circle cx="150" cy="145" r="19" fill="${v.wheel}"/>
+    <!-- chimney + smoke -->
+    <rect x="145" y="15" width="18" height="30" rx="4" fill="${v.wheel}"/>
+    <circle class="puff p1" cx="154" cy="8" r="9" fill="${v.smoke}"/>
+    <circle class="puff p2" cx="154" cy="8" r="7" fill="${v.smoke}"/>
+    <circle class="puff p3" cx="154" cy="8" r="11" fill="${v.smoke}"/>
+  </svg>`;
+}
+
+function renderTrainReward(){
+  const milestone = current;
+  const variant = trainVariants[trainRewardIndex % trainVariants.length];
+  trainRewardIndex++;
+
+  stage.innerHTML = `
+    <div class="train-reward">
+      <div class="train-scene">
+        <div class="tsc-sky"></div>
+        <div class="tsc-cloud c1"></div>
+        <div class="tsc-cloud c2"></div>
+        <div class="tsc-station">
+          <div class="tsc-roof"></div>
+          <div class="tsc-sign">STATION</div>
+          <div class="tsc-platform"></div>
+        </div>
+        <div class="tsc-track"></div>
+        <div class="tsc-train-wrap">${buildTrainSVG(variant)}</div>
+      </div>
+      <h2>${milestone} Questions Done!</h2>
+      <p>Perfect 10! You unlocked the <strong>${variant.name}</strong> 🎉</p>
+      <button class="nextbtn show" id="continueBtn">Continue →</button>
+    </div>
+  `;
+  document.getElementById('continueBtn').addEventListener('click', renderQuestion);
 }
 
 function renderResults(){
